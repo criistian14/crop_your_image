@@ -2,6 +2,9 @@ part of crop_your_image;
 
 const dotTotalSize = 32.0; // fixed corner dot size.
 
+const double defaultWidthBorderArea = 5.0; // Default width inner border
+const Color defaultColorBorderArea = Colors.white; // Default color inner border
+
 typedef CornerDotBuilder = Widget Function(
     double size, EdgeAlignment edgeAlignment);
 
@@ -42,7 +45,7 @@ class Crop extends StatelessWidget {
   /// if [true], [aspectRatio] is fixed to 1.
   final bool withCircleUi;
 
-  /// conroller for control crop actions
+  /// controller for control crop actions
   final CropController? controller;
 
   /// Callback called when cropping area moved.
@@ -66,6 +69,14 @@ class Crop extends StatelessWidget {
   /// If default dot Widget with different color is needed, [DotControl] is available.
   final CornerDotBuilder? cornerDotBuilder;
 
+  /// [Color] of the inner border of the area to be cropped
+  /// Default is [defaultColorBorderArea]
+  final Color? colorBorderArea;
+
+  /// width of the inner border of the area to be cropped
+  /// Default is [defaultWidthBorderArea]
+  final double? widthBorderArea;
+
   const Crop({
     Key? key,
     required this.image,
@@ -80,6 +91,8 @@ class Crop extends StatelessWidget {
     this.maskColor,
     this.baseColor = Colors.white,
     this.cornerDotBuilder,
+    this.colorBorderArea,
+    this.widthBorderArea,
   })  : assert((initialSize ?? 1.0) <= 1.0,
             'initialSize must be less than 1.0, or null meaning not specified.'),
         super(key: key);
@@ -106,6 +119,8 @@ class Crop extends StatelessWidget {
             maskColor: maskColor,
             baseColor: baseColor,
             cornerDotBuilder: cornerDotBuilder,
+            colorBorderArea: colorBorderArea,
+            widthBorderArea: widthBorderArea,
           ),
         );
       },
@@ -126,6 +141,8 @@ class _CropEditor extends StatefulWidget {
   final Color? maskColor;
   final Color baseColor;
   final CornerDotBuilder? cornerDotBuilder;
+  final Color? colorBorderArea;
+  final double? widthBorderArea;
 
   const _CropEditor({
     Key? key,
@@ -141,6 +158,8 @@ class _CropEditor extends StatefulWidget {
     this.maskColor,
     required this.baseColor,
     this.cornerDotBuilder,
+    this.colorBorderArea,
+    this.widthBorderArea,
   }) : super(key: key);
 
   @override
@@ -320,6 +339,25 @@ class _CropEditorState extends State<_CropEditor> {
                     width: double.infinity,
                     height: double.infinity,
                     color: widget.maskColor ?? Colors.black.withAlpha(100),
+                  ),
+                ),
+              ),
+              IgnorePointer(
+                child: CustomPaint(
+                  painter: _withCircleUi
+                      ? _BorderCircleCropAreaPainter(
+                          rect: _rect,
+                          colorBorderArea: widget.colorBorderArea,
+                          widthBorderArea: widget.widthBorderArea,
+                        )
+                      : _BorderCropAreaPainter(
+                          rect: _rect,
+                          colorBorderArea: widget.colorBorderArea,
+                          widthBorderArea: widget.widthBorderArea,
+                        ),
+                  child: Container(
+                    width: double.infinity,
+                    height: double.infinity,
                   ),
                 ),
               ),
@@ -548,4 +586,64 @@ image.Image _fromByteData(Uint8List data) {
       return image.copyRotate(tempImage!, -90);
   }
   return tempImage!;
+}
+
+class _BorderCropAreaPainter extends CustomPainter {
+  final Rect rect;
+  final Color? colorBorderArea;
+  final double? widthBorderArea;
+
+  const _BorderCropAreaPainter({
+    required this.rect,
+    this.colorBorderArea,
+    this.widthBorderArea,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    Paint paint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = widthBorderArea ?? defaultWidthBorderArea
+      ..color = colorBorderArea ?? defaultColorBorderArea;
+
+    Path path = Path()
+      ..moveTo(rect.left, rect.top)
+      ..lineTo(rect.right, rect.top)
+      ..lineTo(rect.right, rect.bottom)
+      ..lineTo(rect.left, rect.bottom)
+      ..close();
+
+    canvas.drawPath(path, paint);
+  }
+
+  @override
+  bool shouldRepaint(CustomPainter oldDelegate) => true;
+}
+
+class _BorderCircleCropAreaPainter extends CustomPainter {
+  final Rect rect;
+  final Color? colorBorderArea;
+  final double? widthBorderArea;
+
+  const _BorderCircleCropAreaPainter({
+    required this.rect,
+    this.colorBorderArea,
+    this.widthBorderArea,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    Paint paint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = widthBorderArea ?? defaultWidthBorderArea
+      ..color = colorBorderArea ?? defaultColorBorderArea;
+
+    Path path = Path()
+      ..addOval(Rect.fromCircle(center: rect.center, radius: rect.width / 2));
+
+    canvas.drawPath(path, paint);
+  }
+
+  @override
+  bool shouldRepaint(CustomPainter oldDelegate) => true;
 }
